@@ -315,18 +315,20 @@ extension DelegateProxyType where ParentObject: HasPrefetchDataSource, Self.Dele
     }
 }
 
-    #if os(iOS) || os(tvOS)
-        import UIKit
+#if os(iOS) || os(tvOS)
+    import UIKit
+#endif
 
         extension ObservableType {
             func subscribeProxyDataSource<DelegateProxy: DelegateProxyType>(ofObject object: DelegateProxy.ParentObject, dataSource: DelegateProxy.Delegate, retainDataSource: Bool, binding: @escaping (DelegateProxy, Event<E>) -> Void)
                 -> Disposable
-                where DelegateProxy.ParentObject: UIView
-                , DelegateProxy.Delegate: AnyObject {
+                where DelegateProxy.ParentObject: ReactiveCompatible, DelegateProxy.Delegate: AnyObject {
                 let proxy = DelegateProxy.proxy(for: object)
                 let unregisterDelegate = DelegateProxy.installForwardDelegate(dataSource, retainDelegate: retainDataSource, onProxyForObject: object)
                 // this is needed to flush any delayed old state (https://github.com/RxSwiftCommunity/RxDataSources/pull/75)
-                object.layoutIfNeeded()
+                #if os(iOS) || os(tvOS)
+                    (object as? UIView).layoutIfNeeded()
+                #endif
 
                 let subscription = self.asObservable()
                     .observeOn(MainScheduler())
@@ -334,7 +336,6 @@ extension DelegateProxyType where ParentObject: HasPrefetchDataSource, Self.Dele
                         bindingError(error)
                         return Observable.empty()
                     }
-                    // source can never end, otherwise it would release the subscriber, and deallocate the data source
                     .concat(Observable.never())
                     .takeUntil(object.rx.deallocated)
                     .subscribe { [weak object] (event: Event<E>) in
@@ -358,13 +359,15 @@ extension DelegateProxyType where ParentObject: HasPrefetchDataSource, Self.Dele
                     
                 return Disposables.create { [weak object] in
                     subscription.dispose()
-                    object?.layoutIfNeeded()
+                    #if os(iOS) || os(tvOS)
+                        (object as? UIView).layoutIfNeeded()
+                    #endif
                     unregisterDelegate.dispose()
                 }
             }
         }
 
-    #endif
+
 
     /**
 

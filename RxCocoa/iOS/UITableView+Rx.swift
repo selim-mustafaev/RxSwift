@@ -143,8 +143,8 @@ extension Reactive where Base: UITableView {
     */
     public var dataSource: DelegateProxy<UITableView, UITableViewDataSource> {
         return RxTableViewDataSourceProxy.proxy(for: base)
+        
     }
-   
     /**
     Installs data source as forwarding delegate on `rx.dataSource`.
     Data source won't be retained.
